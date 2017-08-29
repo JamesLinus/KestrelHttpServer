@@ -25,7 +25,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
                                  IHttpBodyControlFeature,
                                  IHttpMaxRequestBodySizeFeature,
                                  IHttpMinRequestBodyDataRateFeature,
-                                 IHttpMinResponseDataRateFeature
+                                 IHttpMinResponseDataRateFeature,
+                                 IHttpStreamIdFeature
     {
         // NOTE: When feature interfaces are added to or removed from this Frame class implementation,
         // then the list of `implementedFeatures` in the generated code project MUST also be updated.
@@ -163,7 +164,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
 
         bool IHttpResponseFeature.HasStarted => HasResponseStarted;
 
-        bool IHttpUpgradeFeature.IsUpgradableRequest => _upgradeAvailable;
+        bool IHttpUpgradeFeature.IsUpgradableRequest => IsUpgradableRequest;
 
         bool IFeatureCollection.IsReadOnly => false;
 
@@ -211,7 +212,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
             set => AllowSynchronousIO = value;
         }
 
-        bool IHttpMaxRequestBodySizeFeature.IsReadOnly => HasStartedConsumingRequestBody || _wasUpgraded;
+        bool IHttpMaxRequestBodySizeFeature.IsReadOnly => HasStartedConsumingRequestBody || IsUpgraded;
 
         long? IHttpMaxRequestBodySizeFeature.MaxRequestBodySize
         {
@@ -222,7 +223,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
                 {
                     throw new InvalidOperationException(CoreStrings.MaxRequestBodySizeCannotBeModifiedAfterRead);
                 }
-                if (_wasUpgraded)
+                if (IsUpgraded)
                 {
                     throw new InvalidOperationException(CoreStrings.MaxRequestBodySizeCannotBeModifiedForUpgradedRequests);
                 }
@@ -273,43 +274,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
             OnCompleted(callback, state);
         }
 
-        async Task<Stream> IHttpUpgradeFeature.UpgradeAsync()
-        {
-            if (!((IHttpUpgradeFeature)this).IsUpgradableRequest)
-            {
-                throw new InvalidOperationException(CoreStrings.CannotUpgradeNonUpgradableRequest);
-            }
-
-            if (_wasUpgraded)
-            {
-                throw new InvalidOperationException(CoreStrings.UpgradeCannotBeCalledMultipleTimes);
-            }
-
-            if (!ServiceContext.ConnectionManager.UpgradedConnectionCount.TryLockOne())
-            {
-                throw new InvalidOperationException(CoreStrings.UpgradedConnectionLimitReached);
-            }
-
-            _wasUpgraded = true;
-
-            ServiceContext.ConnectionManager.NormalConnectionCount.ReleaseOne();
-
-            StatusCode = StatusCodes.Status101SwitchingProtocols;
-            ReasonPhrase = "Switching Protocols";
-            ResponseHeaders["Connection"] = "Upgrade";
-            if (!ResponseHeaders.ContainsKey("Upgrade"))
-            {
-                StringValues values;
-                if (RequestHeaders.TryGetValue("Upgrade", out values))
-                {
-                    ResponseHeaders["Upgrade"] = values;
-                }
-            }
-
-            await FlushAsync(default(CancellationToken));
-
-            return _streams.Upgrade();
-        }
+        Task<Stream> IHttpUpgradeFeature.UpgradeAsync() => UpgradeAsync();
 
         IEnumerator<KeyValuePair<Type, object>> IEnumerable<KeyValuePair<Type, object>>.GetEnumerator() => FastEnumerable().GetEnumerator();
 
@@ -319,5 +284,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
         {
             Abort(error: null);
         }
+
+        int IHttpStreamIdFeature.StreamId => StreamId;
     }
 }
