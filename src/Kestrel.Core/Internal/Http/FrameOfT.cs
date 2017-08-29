@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
 {
-    public class Frame<TContext> : Frame
+    public class Frame<TContext> : Http1Frame
     {
         private readonly IHttpApplication<TContext> _application;
 

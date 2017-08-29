@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 
 namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
 {
-    public class FrameContext
+    public class FrameContext : IHttpProtocolContext
     {
         public string ConnectionId { get; set; }
         public ServiceContext ServiceContext { get; set; }
