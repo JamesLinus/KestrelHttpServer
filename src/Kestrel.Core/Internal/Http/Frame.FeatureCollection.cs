@@ -25,8 +25,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
                                  IHttpBodyControlFeature,
                                  IHttpMaxRequestBodySizeFeature,
                                  IHttpMinRequestBodyDataRateFeature,
-                                 IHttpMinResponseDataRateFeature,
-                                 IHttp2StreamIdFeature
+                                 IHttpMinResponseDataRateFeature
     {
         // NOTE: When feature interfaces are added to or removed from this Frame class implementation,
         // then the list of `implementedFeatures` in the generated code project MUST also be updated.
@@ -274,7 +273,43 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
             OnCompleted(callback, state);
         }
 
-        Task<Stream> IHttpUpgradeFeature.UpgradeAsync() => UpgradeAsync();
+        async Task<Stream> IHttpUpgradeFeature.UpgradeAsync()
+        {
+            if (!((IHttpUpgradeFeature)this).IsUpgradableRequest)
+            {
+                throw new InvalidOperationException(CoreStrings.CannotUpgradeNonUpgradableRequest);
+            }
+
+            if (_isUpgraded)
+            {
+                throw new InvalidOperationException(CoreStrings.UpgradeCannotBeCalledMultipleTimes);
+            }
+
+            if (!ServiceContext.ConnectionManager.UpgradedConnectionCount.TryLockOne())
+            {
+                throw new InvalidOperationException(CoreStrings.UpgradedConnectionLimitReached);
+            }
+
+            _isUpgraded = true;
+
+            ServiceContext.ConnectionManager.NormalConnectionCount.ReleaseOne();
+
+            StatusCode = StatusCodes.Status101SwitchingProtocols;
+            ReasonPhrase = "Switching Protocols";
+            ResponseHeaders["Connection"] = "Upgrade";
+            if (!ResponseHeaders.ContainsKey("Upgrade"))
+            {
+                StringValues values;
+                if (RequestHeaders.TryGetValue("Upgrade", out values))
+                {
+                    ResponseHeaders["Upgrade"] = values;
+                }
+            }
+
+            await FlushAsync(default(CancellationToken));
+
+            return _streams.Upgrade();
+        }
 
         IEnumerator<KeyValuePair<Type, object>> IEnumerable<KeyValuePair<Type, object>>.GetEnumerator() => FastEnumerable().GetEnumerator();
 
@@ -284,7 +319,5 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Http
         {
             Abort(error: null);
         }
-
-        int IHttp2StreamIdFeature.StreamId => StreamId;
     }
 }
