@@ -74,7 +74,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                 var buffer = new ArraySegment<byte>(new byte[bufferSize], 0, bufferSize);
 
                 // Act
-                var writeTask = outputProducer.WriteAsync(buffer);
+                var writeTask = outputProducer.WriteDataAsync(buffer);
 
                 // Assert
                 await writeTask.TimeoutAfter(TimeSpan.FromSeconds(5));
@@ -109,7 +109,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                 var buffer = new ArraySegment<byte>(new byte[bufferSize], 0, bufferSize);
 
                 // Act
-                var writeTask = outputProducer.WriteAsync(buffer);
+                var writeTask = outputProducer.WriteDataAsync(buffer);
 
                 // Assert
                 await writeTask.TimeoutAfter(TimeSpan.FromSeconds(5));
@@ -155,7 +155,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                 var buffer = new ArraySegment<byte>(new byte[bufferSize], 0, bufferSize);
 
                 // Act
-                var writeTask = outputProducer.WriteAsync(buffer);
+                var writeTask = outputProducer.WriteDataAsync(buffer);
 
                 // Assert
                 Assert.False(writeTask.IsCompleted);
@@ -210,14 +210,14 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                 var buffer = new ArraySegment<byte>(new byte[bufferSize], 0, bufferSize);
 
                 // Act
-                var writeTask1 = outputProducer.WriteAsync(buffer);
+                var writeTask1 = outputProducer.WriteDataAsync(buffer);
 
                 // Assert
                 // The first write should pre-complete since it is <= _maxBytesPreCompleted.
                 Assert.Equal(TaskStatus.RanToCompletion, writeTask1.Status);
 
                 // Act
-                var writeTask2 = outputProducer.WriteAsync(buffer);
+                var writeTask2 = outputProducer.WriteDataAsync(buffer);
                 await _mockLibuv.OnPostTask;
 
                 // Assert
@@ -274,7 +274,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                     var halfWriteBehindBuffer = new ArraySegment<byte>(data, 0, bufferSize);
 
                     // Act
-                    var writeTask1 = outputProducer.WriteAsync(halfWriteBehindBuffer);
+                    var writeTask1 = outputProducer.WriteDataAsync(halfWriteBehindBuffer);
 
                     // Assert
                     // The first write should pre-complete since it is <= _maxBytesPreCompleted.
@@ -290,10 +290,10 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                     halfWriteBehindBuffer);
 
                     // Act
-                    var writeTask2 = outputProducer.WriteAsync(halfWriteBehindBuffer);
+                    var writeTask2 = outputProducer.WriteDataAsync(halfWriteBehindBuffer);
                     Assert.False(writeTask2.IsCompleted);
 
-                    var writeTask3 = outputProducer.WriteAsync(halfWriteBehindBuffer);
+                    var writeTask3 = outputProducer.WriteDataAsync(halfWriteBehindBuffer);
                     Assert.False(writeTask3.IsCompleted);
 
                     // Drain the write queue
@@ -344,7 +344,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                     var fullBuffer = new ArraySegment<byte>(data, 0, bufferSize);
 
                     // Act
-                    var task1Success = outputProducer.WriteAsync(fullBuffer, cancellationToken: abortedSource.Token);
+                    var task1Success = outputProducer.WriteDataAsync(fullBuffer, cancellationToken: abortedSource.Token);
                     // task1 should complete successfully as < _maxBytesPreCompleted
 
                     // First task is completed and successful
@@ -353,8 +353,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                     Assert.False(task1Success.IsFaulted);
 
                     // following tasks should wait.
-                    var task2Success = outputProducer.WriteAsync(fullBuffer);
-                    var task3Canceled = outputProducer.WriteAsync(fullBuffer, cancellationToken: abortedSource.Token);
+                    var task2Success = outputProducer.WriteDataAsync(fullBuffer);
+                    var task3Canceled = outputProducer.WriteDataAsync(fullBuffer, cancellationToken: abortedSource.Token);
 
                     // Give time for tasks to percolate
                     await _mockLibuv.OnPostTask;
@@ -382,7 +382,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
 
                     // A final write guarantees that the error is observed by OutputProducer,
                     // but doesn't return a canceled/faulted task.
-                    var task4Success = outputProducer.WriteAsync(fullBuffer, cancellationToken: default(CancellationToken));
+                    var task4Success = outputProducer.WriteDataAsync(fullBuffer, cancellationToken: default(CancellationToken));
                     Assert.True(task4Success.IsCompleted);
                     Assert.False(task4Success.IsCanceled);
                     Assert.False(task4Success.IsFaulted);
@@ -436,7 +436,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                     var fullBuffer = new ArraySegment<byte>(data, 0, bufferSize);
 
                     // Act
-                    var task1Success = outputProducer.WriteAsync(fullBuffer, cancellationToken: abortedSource.Token);
+                    var task1Success = outputProducer.WriteDataAsync(fullBuffer, cancellationToken: abortedSource.Token);
                     // task1 should complete successfully as < _maxBytesPreCompleted
 
                     // First task is completed and successful
@@ -445,7 +445,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                     Assert.False(task1Success.IsFaulted);
 
                     // following tasks should wait.
-                    var task3Canceled = outputProducer.WriteAsync(fullBuffer, cancellationToken: abortedSource.Token);
+                    var task3Canceled = outputProducer.WriteDataAsync(fullBuffer, cancellationToken: abortedSource.Token);
 
                     // Give time for tasks to percolate
                     await _mockLibuv.OnPostTask;
@@ -465,7 +465,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
 
                     // A final write guarantees that the error is observed by OutputProducer,
                     // but doesn't return a canceled/faulted task.
-                    var task4Success = outputProducer.WriteAsync(fullBuffer);
+                    var task4Success = outputProducer.WriteDataAsync(fullBuffer);
                     Assert.True(task4Success.IsCompleted);
                     Assert.False(task4Success.IsCanceled);
                     Assert.False(task4Success.IsFaulted);
@@ -519,7 +519,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                     var fullBuffer = new ArraySegment<byte>(data, 0, bufferSize);
 
                     // Act
-                    var task1Waits = outputProducer.WriteAsync(fullBuffer);
+                    var task1Waits = outputProducer.WriteDataAsync(fullBuffer);
 
                     // First task is not completed
                     Assert.False(task1Waits.IsCompleted);
@@ -527,7 +527,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                     Assert.False(task1Waits.IsFaulted);
 
                     // following tasks should wait.
-                    var task3Canceled = outputProducer.WriteAsync(fullBuffer, cancellationToken: abortedSource.Token);
+                    var task3Canceled = outputProducer.WriteDataAsync(fullBuffer, cancellationToken: abortedSource.Token);
 
                     // Give time for tasks to percolate
                     await _mockLibuv.OnPostTask;
@@ -552,7 +552,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
 
                     // A final write guarantees that the error is observed by OutputProducer,
                     // but doesn't return a canceled/faulted task.
-                    var task4Success = outputProducer.WriteAsync(fullBuffer);
+                    var task4Success = outputProducer.WriteDataAsync(fullBuffer);
                     Assert.True(task4Success.IsCompleted);
                     Assert.False(task4Success.IsCanceled);
                     Assert.False(task4Success.IsFaulted);
@@ -598,7 +598,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                 var buffer = new ArraySegment<byte>(new byte[bufferSize], 0, bufferSize);
 
                 // Act (Pre-complete the maximum number of bytes in preparation for the rest of the test)
-                var writeTask1 = outputProducer.WriteAsync(buffer);
+                var writeTask1 = outputProducer.WriteDataAsync(buffer);
 
                 // Assert
                 // The first write should pre-complete since it is < _maxBytesPreCompleted.
@@ -607,8 +607,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
                 Assert.NotEmpty(completeQueue);
 
                 // Act
-                var writeTask2 = outputProducer.WriteAsync(buffer);
-                var writeTask3 = outputProducer.WriteAsync(buffer);
+                var writeTask2 = outputProducer.WriteDataAsync(buffer);
+                var writeTask3 = outputProducer.WriteDataAsync(buffer);
 
                 await _mockLibuv.OnPostTask;
 
@@ -660,8 +660,8 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
 
                 // Two calls to WriteAsync trigger uv_write once if both calls
                 // are made before write is scheduled
-                var ignore = outputProducer.WriteAsync(buffer);
-                ignore = outputProducer.WriteAsync(buffer);
+                var ignore = outputProducer.WriteDataAsync(buffer);
+                ignore = outputProducer.WriteDataAsync(buffer);
 
                 _mockLibuv.KestrelThreadBlocker.Set();
 
@@ -712,7 +712,7 @@ namespace Microsoft.AspNetCore.Server.Kestrel.Transport.Libuv.Tests
 
             var ignore = WriteOutputAsync(consumer, pair.Application.Input, frame);
 
-            return frame.Output;
+            return (OutputProducer)frame.Output;
         }
 
         private async Task WriteOutputAsync(LibuvOutputConsumer consumer, IPipeReader outputReader, Frame frame)
